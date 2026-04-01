@@ -165,7 +165,7 @@ export default function App() {
       
       const promises = Array.from({ length: count }).map(async () => {
         const response = await openai.images.generate({
-          model: 'gpt-image-1',
+          model: 'gemini-3.1-flash-image-preview',
           prompt: fullPrompt,
           n: 1,
           size: size,
@@ -222,7 +222,7 @@ export default function App() {
 
       const promises = Array.from({ length: iterateCount }).map(async () => {
         const response = await openai.images.generate({
-          model: 'gpt-image-1',
+          model: 'gemini-3.1-flash-image-preview',
           prompt: editPrompt,
           n: 1,
           size: size,
