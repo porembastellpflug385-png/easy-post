@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Upload, X, Download, Bookmark, Plus, Sparkles, ImageIcon, Check } from 'lucide-react';
 import OpenAI from 'openai';
 
+const DEFAULT_IMAGE_MODEL = (import.meta as any).env?.VITE_IMAGE_MODEL || 'flux-1.1-pro';
+const IMAGE_MODEL_FALLBACKS = ['flux-1.1-pro', 'flux-pro', 'gemini-3.1-flash-image-preview'];
+
 // Types
 type GeneratedImage = {
   id: string;
@@ -67,6 +70,29 @@ const getImageSize = (ratio: string): '1024x1024' | '1792x1024' | '1024x1792' =>
   }
 };
 
+const getImageModelCandidates = () => {
+  return Array.from(new Set([DEFAULT_IMAGE_MODEL, ...IMAGE_MODEL_FALLBACKS]));
+};
+
+const isRetryableImageModelError = (error: any) => {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    message.includes('not supported model for image generation') ||
+    message.includes('model_not_found') ||
+    message.includes('does not support image generation') ||
+    message.includes('unsupported model') ||
+    message.includes('404')
+  );
+};
+
+const getFriendlyGenerationError = (error: any) => {
+  const message = String(error?.message || 'Failed to generate images.');
+  if (message.toLowerCase().includes('not supported model for image generation')) {
+    return '当前供应商已不再支持原先的 Gemini 生图模型，系统会自动切换到更稳定的模型重试。';
+  }
+  return message;
+};
+
 // Components
 function SegmentedControl({ options, value, onChange }: { options: any[], value: any, onChange: (v: any) => void }) {
   return (
@@ -120,6 +146,33 @@ export default function App() {
   const [iterateFeedback, setIterateFeedback] = useState('');
   const [iterateCount, setIterateCount] = useState(1);
   const [isIterating, setIsIterating] = useState(false);
+  const [activeImageModel, setActiveImageModel] = useState(DEFAULT_IMAGE_MODEL);
+
+  const generateWithFallbackModel = async (promptText: string, size: ReturnType<typeof getImageSize>) => {
+    const candidates = getImageModelCandidates();
+    let lastError: any = null;
+
+    for (const model of candidates) {
+      try {
+        const response = await openai.images.generate({
+          model,
+          prompt: promptText,
+          n: 1,
+          size,
+          response_format: 'b64_json',
+        });
+        setActiveImageModel(model);
+        return response;
+      } catch (error: any) {
+        lastError = error;
+        if (!isRetryableImageModelError(error)) {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError || new Error('Failed to generate images.');
+  };
 
   // Handlers
   const handleProductUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,14 +217,7 @@ export default function App() {
       const size = getImageSize(aspectRatio);
       
       const promises = Array.from({ length: count }).map(async () => {
-        const response = await openai.images.generate({
-          model: 'gemini-3.1-flash-image-preview',
-          prompt: fullPrompt,
-          n: 1,
-          size: size,
-          response_format: 'b64_json',
-        });
-        return response;
+        return generateWithFallbackModel(fullPrompt, size);
       });
 
       const responses = await Promise.all(promises);
@@ -205,7 +251,7 @@ export default function App() {
       
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'Failed to generate images.');
+      setError(getFriendlyGenerationError(err));
     } finally {
       setIsGenerating(false);
     }
@@ -221,14 +267,7 @@ export default function App() {
       const size = getImageSize(group.aspectRatio);
 
       const promises = Array.from({ length: iterateCount }).map(async () => {
-        const response = await openai.images.generate({
-          model: 'gemini-3.1-flash-image-preview',
-          prompt: editPrompt,
-          n: 1,
-          size: size,
-          response_format: 'b64_json',
-        });
-        return response;
+        return generateWithFallbackModel(editPrompt, size);
       });
 
       const responses = await Promise.all(promises);
@@ -264,7 +303,7 @@ export default function App() {
       
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'Failed to iterate image.');
+      alert(getFriendlyGenerationError(err));
     } finally {
       setIsIterating(false);
     }
@@ -387,6 +426,10 @@ export default function App() {
               {error}
             </div>
           )}
+
+          <div className="text-[11px] text-gray-400">
+            Image model: <span className="font-medium text-gray-500">{activeImageModel}</span>
+          </div>
         </div>
         
         <div className="p-6 bg-white/50 backdrop-blur-xl border-t border-gray-100">
