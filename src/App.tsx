@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Upload, X, Download, Bookmark, Plus, Sparkles, ImageIcon, Check } from 'lucide-react';
 import OpenAI from 'openai';
 
-const DEFAULT_IMAGE_MODEL = (import.meta as any).env?.VITE_IMAGE_MODEL || 'flux-1.1-pro';
-const IMAGE_MODEL_FALLBACKS = ['flux-1.1-pro', 'flux-pro', 'gemini-3.1-flash-image-preview'];
+const DEFAULT_IMAGE_MODEL = (import.meta as any).env?.VITE_IMAGE_MODEL || 'gemini-3.1-flash-image-preview';
+const IMAGE_MODEL_FALLBACKS = ['gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview'];
 
 // Types
 type GeneratedImage = {
