@@ -30,7 +30,7 @@ type SavedImage = GeneratedImage & {
 // Initialize OpenAI client
 const openai = new OpenAI({
   baseURL: process.env.OPENAI_BASE_URL || 'https://ai.scd666.com/v1',
-  apiKey: process.env.OPENAI_API_KEY || 'sk-12a7BPJym4RJSfqoVq5EHEEAs4ohQjIAZOA8QWVMNmFA0Fru',
+  apiKey: process.env.OPENAI_API_KEY || 'sk-7BsWZFtSSeYOlA9Xn19AuMRjXiE1jlucFrUPsLDjUg8NrN5l',
   dangerouslyAllowBrowser: true,
 });
 
